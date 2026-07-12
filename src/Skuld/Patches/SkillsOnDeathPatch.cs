@@ -10,7 +10,7 @@ internal static class SkillsOnDeathPatch
         Plugin.Log.LogInfo("Skuld patch entry: Skills.OnDeath prefix fired.");
         SkillDebtService.LogHardDeathDiagnostics(__instance);
 
-        if (!ModConfig.EnableMod.Value || !SkillDebtService.IsReady)
+        if (!ModConfig.IsModEnabled || !SkillDebtService.IsReady)
         {
             return true;
         }

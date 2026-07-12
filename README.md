@@ -2,7 +2,7 @@
 
 Valheim BepInEx mod — replaces hard-death skill loss with repayable per-skill debt.
 
-**Current version:** 0.2.0
+**Current version:** 0.3.0
 
 ## Quick links
 
@@ -21,4 +21,4 @@ Valheim BepInEx mod — replaces hard-death skill loss with repayable per-skill 
 
 ## Dev testing
 
-Set `EnableDevCommands = true` in `BepInEx/config/com.cdjensen99.skuld.cfg` for `skuld_clearcooldown` and `skuld_cleardebt`. Must remain `false` for Thunderstore releases.
+Set `EnableDevCommands = true` in `BepInEx/config/com.cdjensen99.skuld.cfg` for `skuld_clearcooldown` and `skuld_cleardebt`. These register as Valheim cheat commands and require `devcommands`; using them marks the character as cheated for achievements. Must remain `false` for Thunderstore releases.

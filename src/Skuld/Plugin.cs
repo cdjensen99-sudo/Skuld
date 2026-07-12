@@ -10,10 +10,12 @@ namespace Skuld;
 public sealed class Plugin : BaseUnityPlugin
 {
     internal static ManualLogSource Log = null!;
+    internal static Plugin Instance { get; private set; } = null!;
     private Harmony harmony;
 
     private void Awake()
     {
+        Instance = this;
         Log = Logger;
         ModConfig.Bind(Config);
         SkillDebtService.Initialize();

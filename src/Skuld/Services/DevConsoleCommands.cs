@@ -17,23 +17,34 @@ internal static class DevConsoleCommands
         new Terminal.ConsoleCommand(
             "skuld_clearcooldown",
             "Skuld dev: force the next death to count as a hard death.",
-            ClearCooldown);
+            ClearCooldown,
+            isCheat: true,
+            isNetwork: false,
+            onlyServer: true,
+            isSecret: true);
 
         new Terminal.ConsoleCommand(
             "skuld_cleardebt",
             "Skuld dev: clear all outstanding skill debt for the local player.",
-            ClearDebt);
+            ClearDebt,
+            isCheat: true,
+            isNetwork: false,
+            onlyServer: true,
+            isSecret: true);
 
         registered = true;
-        string state = ModConfig.EnableDevCommands.Value ? "enabled" : "disabled (set EnableDevCommands=true in com.cdjensen99.skuld.cfg)";
+        string state = ModConfig.IsDevCommandsEnabled()
+            ? "enabled on server/host"
+            : "disabled (set EnableDevCommands=true on the server/host cfg)";
         Plugin.Log.LogInfo($"Skuld dev console commands registered ({state}): skuld_clearcooldown, skuld_cleardebt.");
     }
 
     private static void ClearCooldown(Terminal.ConsoleEventArgs args)
     {
-        if (!ModConfig.EnableDevCommands.Value)
+        if (!ModConfig.IsDevCommandsEnabled())
         {
-            args.Context.AddString("Skuld dev commands are disabled. Set EnableDevCommands=true in BepInEx/config/com.cdjensen99.skuld.cfg.");
+            args.Context.AddString(
+                "Skuld dev commands are disabled. Set EnableDevCommands=true in the server/host BepInEx config.");
             return;
         }
 
@@ -50,9 +61,10 @@ internal static class DevConsoleCommands
 
     private static void ClearDebt(Terminal.ConsoleEventArgs args)
     {
-        if (!ModConfig.EnableDevCommands.Value)
+        if (!ModConfig.IsDevCommandsEnabled())
         {
-            args.Context.AddString("Skuld dev commands are disabled. Set EnableDevCommands=true in BepInEx/config/com.cdjensen99.skuld.cfg.");
+            args.Context.AddString(
+                "Skuld dev commands are disabled. Set EnableDevCommands=true in the server/host BepInEx config.");
             return;
         }
 

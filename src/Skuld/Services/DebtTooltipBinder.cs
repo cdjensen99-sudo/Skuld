@@ -8,14 +8,22 @@ namespace Skuld;
 internal sealed class DebtTooltipBinder : MonoBehaviour
 {
     private Skills.SkillType skillType;
+    private Skills.Skill skill;
     private UITooltip tooltip;
     private RectTransform tooltipAnchor;
     private Vector2 fixedPosition;
     private string baseDescription = string.Empty;
 
-    internal void Initialize(Skills.SkillType type, UITooltip tip, string description, RectTransform anchor, Vector2 position)
+    internal void Initialize(
+        Skills.SkillType type,
+        Skills.Skill skillRef,
+        UITooltip tip,
+        string description,
+        RectTransform anchor,
+        Vector2 position)
     {
         skillType = type;
+        skill = skillRef;
         tooltip = tip;
         baseDescription = description ?? string.Empty;
         tooltipAnchor = anchor;
@@ -33,6 +41,11 @@ internal sealed class DebtTooltipBinder : MonoBehaviour
         if (tooltip == null || Player.m_localPlayer == null)
         {
             return;
+        }
+
+        if (skill != null)
+        {
+            SkillDebtBarOverlay.Apply(transform, Player.m_localPlayer, skill);
         }
 
         float remaining = SkillDebtService.GetDebt(Player.m_localPlayer, skillType);

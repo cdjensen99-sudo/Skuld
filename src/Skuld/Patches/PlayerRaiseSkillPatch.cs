@@ -15,7 +15,7 @@ internal static class PlayerRaiseSkillPatch
             hasLoggedEntry = true;
         }
 
-        if (!ModConfig.EnableMod.Value || !SkillDebtService.IsReady)
+        if (!ModConfig.IsModEnabled || !SkillDebtService.IsReady)
         {
             return;
         }

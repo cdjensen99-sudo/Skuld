@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0
+
+- **Server gameplay config sync** — `EnableMod`, `DebtPaydownShare`, and `MaxDebtPerSkill` are pushed from server/host to joining clients for the session (in-memory only; local cfg unchanged). Join message shows server rules; mismatch warning if local `EnableMod` differs.
+- **`[Visual]` config section** — global `DebtBarColor`, `DebtTextColor`, `DebtTextSize` (client-only, not server synced).
+- **Maroon debt bar** — debt segment on the gold skill level bar, with configurable colors.
+- **Debt cleared feedback** — optional client-side halo + sound (`EnableDebtClearedSound`, default off).
+- **Soft-death clarity** — top-left message: *"Soft death — no skill debt"*.
+- **Lifetime repaid** — `/show debt lifetime <skill>` shows lifetime incurred and lifetime repaid together.
+- **Focus paydown** — `/focus <skill|all|off>` and `/show focus` for voluntary 100% paydown until debt clears (per-character, not server synced).
+- **Skill-cap mod compatibility (best-effort)** — debt bar scale follows the skills panel level bar; **not author-tested** with skill-cap mods — please report issues.
+- **Dev commands** — `EnableDevCommands` is server/host only (not server synced); still requires Valheim `devcommands` and admin rights.
+
 ## 0.2.0
 
 - **Paid-off baseline tracking** — `paidOff = baseline − currentDebt` (replaces lifetime-based progress display)

@@ -195,7 +195,7 @@ internal static class SkillDebtService
         float effectiveValue = incomingValue * multiplier;
 
         float accumulatorUnits = increaseStep * effectiveValue * Game.m_skillGainRate;
-        float paydownShare = ModConfig.GetPaydownShare();
+        float paydownShare = GetPaydownShare(player, skillType);
         float levelingShare = 1f - paydownShare;
 
         float nextLevelRequirement = GetNextLevelRequirement(skill.m_level);
@@ -217,9 +217,11 @@ internal static class SkillDebtService
             $"Debt paydown: {skillType} paid {actualDebtPaidLevels:F4} (intended {debtPaidLevels:F4}), debt {debt:F4}->{newDebt:F4}, " +
             $"rerouted {unusedDebtUnits:F4} units to leveling, forwarded pre-multiplier value {value:F4}");
 
-        if (debt > 0f && newDebt <= 0f && MessageHud.instance != null)
+        if (debt > 0f && newDebt <= 0f)
         {
-            MessageHud.instance.ShowMessage(MessageHud.MessageType.Center, $"{skillType} debt repaid");
+            ClearFocusPaydownForSkill(player, skillType);
+            DebtClearedFeedback.TryPlay(player);
+            MessageHud.instance?.ShowMessage(MessageHud.MessageType.Center, $"{skillType} debt repaid");
         }
 
         return true;
@@ -289,13 +291,263 @@ internal static class SkillDebtService
         EnsureProgressConsistency(player, skillType);
         float remaining = GetDebt(player, skillType);
         float paidOff = GetPaidOff(player, skillType);
-        return $"-{remaining:0.0000}  ({paidOff:0.0000} paid off)";
+        string focusSuffix = IsFocusPaydownActive(player, skillType) ? "  [focused 100%]" : string.Empty;
+        return $"-{remaining:0.0000}  ({paidOff:0.0000} paid off){focusSuffix}";
+    }
+
+    internal static float GetPaydownShare(Player player, Skills.SkillType skillType)
+    {
+        if (IsFocusPaydownActive(player, skillType))
+        {
+            return ModConstants.FocusPaydownShare;
+        }
+
+        return ModConfig.GetPaydownShare();
+    }
+
+    internal static bool IsFocusAll(Player player)
+    {
+        return GetCustomFlag(player, ModConstants.FocusPaydownAllKey);
+    }
+
+    internal static bool IsFocusPaydownActive(Player player, Skills.SkillType skillType)
+    {
+        if (player == null || skillType == Skills.SkillType.None)
+        {
+            return false;
+        }
+
+        if (IsFocusAll(player))
+        {
+            return GetDebt(player, skillType) > 0f;
+        }
+
+        return GetCustomFlag(player, GetFocusPaydownKey(skillType));
+    }
+
+    internal static bool TryEnableFocusAll(Player player, out string message)
+    {
+        message = string.Empty;
+        if (player?.m_customData == null)
+        {
+            return false;
+        }
+
+        ClearPerSkillFocusFlags(player);
+        SetCustomFlag(player, ModConstants.FocusPaydownAllKey, true);
+        message = "Focus all enabled — 100% paydown on skills with debt until cleared.";
+        return true;
+    }
+
+    internal static bool TryEnableFocusSkill(Player player, Skills.SkillType skillType, out string message)
+    {
+        message = string.Empty;
+        if (player?.m_customData == null || skillType == Skills.SkillType.None)
+        {
+            return false;
+        }
+
+        SetCustomFlag(player, ModConstants.FocusPaydownAllKey, false);
+        SetCustomFlag(player, GetFocusPaydownKey(skillType), true);
+        message = $"{FormatSkillName(skillType)} focus enabled — 100% paydown until that debt is cleared.";
+        return true;
+    }
+
+    internal static void ClearAllFocusPaydown(Player player)
+    {
+        if (player?.m_customData == null)
+        {
+            return;
+        }
+
+        SetCustomFlag(player, ModConstants.FocusPaydownAllKey, false);
+        ClearPerSkillFocusFlags(player);
+    }
+
+    internal static void ShowFocusOverview(Player player, Terminal context)
+    {
+        if (player == null)
+        {
+            context?.AddString("No local player.");
+            return;
+        }
+
+        PruneInactiveFocusFlags(player);
+
+        if (IsFocusAll(player))
+        {
+            List<string> indebted = GetIndebtedSkillNames(player);
+            context.AddString("Focus all: active — 100% paydown on skills with debt.");
+            if (indebted.Count > 0)
+            {
+                context.AddString("  Indebted: " + string.Join(", ", indebted));
+            }
+            else
+            {
+                context.AddString("  No outstanding debt right now.");
+            }
+
+            return;
+        }
+
+        List<string> focusedSkills = GetFocusedSkillNames(player);
+        if (focusedSkills.Count == 0)
+        {
+            context.AddString("No focused paydown skills. Use /focus <skill|all> or /focus off.");
+            return;
+        }
+
+        context.AddString($"Focused paydown ({focusedSkills.Count}) — 100% until cleared:");
+        foreach (string entry in focusedSkills)
+        {
+            context.AddString("  " + entry);
+        }
+    }
+
+    private static void ClearFocusPaydownForSkill(Player player, Skills.SkillType skillType)
+    {
+        SetCustomFlag(player, GetFocusPaydownKey(skillType), false);
+        if (IsFocusAll(player) && !HasAnyDebt(player))
+        {
+            SetCustomFlag(player, ModConstants.FocusPaydownAllKey, false);
+        }
+    }
+
+    private static string GetFocusPaydownKey(Skills.SkillType skillType)
+    {
+        return ModConstants.FocusPaydownKeyPrefix + skillType;
+    }
+
+    private static void ClearPerSkillFocusFlags(Player player)
+    {
+        foreach (Skills.SkillType skillType in Enum.GetValues(typeof(Skills.SkillType)))
+        {
+            if (skillType == Skills.SkillType.None)
+            {
+                continue;
+            }
+
+            SetCustomFlag(player, GetFocusPaydownKey(skillType), false);
+        }
+    }
+
+    private static void PruneInactiveFocusFlags(Player player)
+    {
+        foreach (Skills.SkillType skillType in Enum.GetValues(typeof(Skills.SkillType)))
+        {
+            if (skillType == Skills.SkillType.None)
+            {
+                continue;
+            }
+
+            if (GetCustomFlag(player, GetFocusPaydownKey(skillType)) && GetDebt(player, skillType) <= 0f)
+            {
+                SetCustomFlag(player, GetFocusPaydownKey(skillType), false);
+            }
+        }
+
+        if (IsFocusAll(player) && !HasAnyDebt(player))
+        {
+            SetCustomFlag(player, ModConstants.FocusPaydownAllKey, false);
+        }
+    }
+
+    private static bool HasAnyDebt(Player player)
+    {
+        foreach (Skills.SkillType skillType in Enum.GetValues(typeof(Skills.SkillType)))
+        {
+            if (skillType == Skills.SkillType.None)
+            {
+                continue;
+            }
+
+            if (GetDebt(player, skillType) > 0f)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static List<string> GetIndebtedSkillNames(Player player)
+    {
+        List<string> names = new();
+        foreach (Skills.SkillType skillType in Enum.GetValues(typeof(Skills.SkillType)))
+        {
+            if (skillType == Skills.SkillType.None)
+            {
+                continue;
+            }
+
+            if (GetDebt(player, skillType) > 0f)
+            {
+                names.Add(FormatSkillName(skillType));
+            }
+        }
+
+        return names;
+    }
+
+    private static List<string> GetFocusedSkillNames(Player player)
+    {
+        List<string> names = new();
+        foreach (Skills.SkillType skillType in Enum.GetValues(typeof(Skills.SkillType)))
+        {
+            if (skillType == Skills.SkillType.None)
+            {
+                continue;
+            }
+
+            if (!GetCustomFlag(player, GetFocusPaydownKey(skillType)))
+            {
+                continue;
+            }
+
+            string suffix = GetDebt(player, skillType) > 0f ? string.Empty : " (no debt)";
+            names.Add(FormatSkillName(skillType) + suffix);
+        }
+
+        return names;
+    }
+
+    private static bool GetCustomFlag(Player player, string key)
+    {
+        if (player?.m_customData == null)
+        {
+            return false;
+        }
+
+        return player.m_customData.TryGetValue(key, out string raw)
+            && string.Equals(raw, "1", StringComparison.Ordinal);
+    }
+
+    private static void SetCustomFlag(Player player, string key, bool value)
+    {
+        if (player?.m_customData == null)
+        {
+            return;
+        }
+
+        if (value)
+        {
+            player.m_customData[key] = "1";
+            return;
+        }
+
+        player.m_customData.Remove(key);
+    }
+
+    internal static float GetLifetimeRepaid(Player player, Skills.SkillType skillType)
+    {
+        return Mathf.Max(0f, GetIncurred(player, skillType) - GetDebt(player, skillType));
     }
 
     internal static string FormatLifetimeDetail(Player player, Skills.SkillType skillType)
     {
-        float lifetime = GetIncurred(player, skillType);
-        return $"{lifetime:0.0000} levels (lifetime)";
+        float incurred = GetIncurred(player, skillType);
+        float repaid = GetLifetimeRepaid(player, skillType);
+        return $"lifetime debt {incurred:0.0000}, lifetime repaid {repaid:0.0000}";
     }
 
     private static void EnsureProgressConsistency(Player player, Skills.SkillType skillType)
@@ -392,12 +644,14 @@ internal static class SkillDebtService
             SetDebt(player, skillType, 0f);
             SetBaseline(player, skillType, 0f);
             SetIncurred(player, skillType, 0f);
+            SetCustomFlag(player, GetFocusPaydownKey(skillType), false);
             if (debt > 0f)
             {
                 cleared.Add($"{FormatSkillName(skillType)} {debt:0.0}");
             }
         }
 
+        SetCustomFlag(player, ModConstants.FocusPaydownAllKey, false);
         return cleared;
     }
 

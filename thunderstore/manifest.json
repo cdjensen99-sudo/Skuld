@@ -1,6 +1,6 @@
 {
   "name": "Skuld",
-  "version_number": "0.2.0",
+  "version_number": "0.3.0",
   "website_url": "https://github.com/cdjensen99-sudo/Skuld",
   "description": "Replaces Valheim hard-death skill loss with repayable per-skill debt. Earn XP to pay it back.",
   "dependencies": [
