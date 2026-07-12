@@ -1,5 +1,5 @@
 using System.Collections;
-using System.Reflection;
+using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
 
@@ -11,7 +11,6 @@ namespace Skuld;
 internal static class ServerConfigSync
 {
     private const byte PackageVersion = 1;
-    private static readonly MethodInfo GetPeerMethod = AccessTools.Method(typeof(ZNet), "GetPeer");
     private static bool rpcRegistered;
 
     internal static void Initialize()
@@ -138,14 +137,24 @@ internal static class ServerConfigSync
         }
     }
 
-    internal static ZNetPeer GetPeer(ZRpc rpc)
+    internal static ZNetPeer FindPeerByRpc(ZRpc rpc)
     {
-        if (ZNet.instance == null || GetPeerMethod == null || rpc == null)
+        if (ZNet.instance == null || rpc == null)
         {
             return null;
         }
 
-        return GetPeerMethod.Invoke(ZNet.instance, new object[] { rpc }) as ZNetPeer;
+        List<ZNetPeer> peers = ZNet.instance.GetPeers();
+        for (int i = 0; i < peers.Count; i++)
+        {
+            ZNetPeer peer = peers[i];
+            if (peer?.m_rpc == rpc)
+            {
+                return peer;
+            }
+        }
+
+        return null;
     }
 }
 
@@ -169,7 +178,7 @@ internal static class ZNetPeerInfoServerConfigSyncPatch
         }
 
         ServerConfigSync.Initialize();
-        ZNetPeer peer = ServerConfigSync.GetPeer(rpc);
+        ZNetPeer peer = ServerConfigSync.FindPeerByRpc(rpc);
         if (peer == null)
         {
             return;
@@ -179,8 +188,8 @@ internal static class ZNetPeerInfoServerConfigSyncPatch
     }
 }
 
-[HarmonyPatch(typeof(ZNet), "Stop")]
-internal static class ZNetStopServerConfigSyncPatch
+[HarmonyPatch(typeof(ZNet), nameof(ZNet.Shutdown))]
+internal static class ZNetShutdownServerConfigSyncPatch
 {
     private static void Prefix()
     {

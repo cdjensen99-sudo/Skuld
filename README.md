@@ -2,7 +2,7 @@
 
 Valheim BepInEx mod — replaces hard-death skill loss with repayable per-skill debt.
 
-**Current version:** 0.3.0
+**Current version:** 0.3.2
 
 ## Quick links
 

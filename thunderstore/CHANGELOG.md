@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.2
+
+- **Fix server config sync crash** — Removed ambiguous `ZNet.GetPeer` reflection lookup (two overloads exist); peers are resolved via `GetPeers()` instead.
+
+## 0.3.1
+
+- **Fix startup crash** — Server config sync patched `ZNet.Stop`, which does not exist in Valheim; now correctly hooks `ZNet.Shutdown` to clear the session overlay on disconnect.
+
 ## 0.3.0
 
 - **Server gameplay config sync** — `EnableMod`, `DebtPaydownShare`, and `MaxDebtPerSkill` are pushed from server/host to joining clients for the session (in-memory only; local cfg unchanged). Join message shows server rules; mismatch warning if local `EnableMod` differs.
