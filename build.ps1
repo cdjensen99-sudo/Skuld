@@ -38,7 +38,7 @@ if ($Deploy) {
 
 if ($Package) {
     $staging = Join-Path $root "artifacts\thunderstore-staging"
-    $team = "HW"
+    $team = "Hardwire99"
     $packageName = "{0}-{1}-{2}.zip" -f $team, $manifest.name, $manifest.version_number
     $packagePath = Join-Path (Join-Path $root "artifacts") $packageName
 
